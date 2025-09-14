@@ -10,7 +10,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-
 current_dir = os.path.dirname(__file__)
 log_file = os.path.join(current_dir, "..", "file.log")
 data_dir = os.path.join(current_dir, "..", "data")
@@ -49,8 +48,8 @@ def try_request(url, headers, max_retries=3, delay=2):
                 return None
 
 
-def load_file():
-    page_number = 31
+def load_file(year):
+    page_number = 65
     while True:
         url = f"{base_url}?page=page-{page_number}"
         response = try_request(url, headers)
@@ -77,7 +76,7 @@ def load_file():
                 try:
                     # Парсим дату и время
                     date_obj = datetime.strptime(date_str + time_str, "%Y%m%d%H%M%S")
-                    if date_obj.year >= 2023:
+                    if date_obj.year >= year:
                         full_url = "https://spimex.com" + href
                         # Формируем более читаемое название файла
                         readable_date = date_obj.strftime("%Y-%m-%d_%H-%M-%S")
@@ -92,7 +91,7 @@ def load_file():
                         if response_file and response_file.status_code == 200:
                             with open(file_path, "wb") as f:
                                 for chunk in response_file.iter_content(
-                                    chunk_size=8192
+                                        chunk_size=8192
                                 ):
                                     if chunk:
                                         f.write(chunk)
@@ -106,12 +105,15 @@ def load_file():
                                 f"Ошибка скачивания файла: "
                                 f"{response_file.status_code if response_file else 'нет ответа'}"
                             )
+                    else:
+                        print(f"Файл ранее {year} года, скачивание завершается")
+                        logging.warning(
+                            f"Файл ранее {year} года, скачивание завершается"
+                        )
+                        return
                 except Exception as e:
                     print(f"Ошибка при обработке файла {href}: {e}")
         page_number += 1
 
 
-
-
-
-load_file()
+load_file(2023)
