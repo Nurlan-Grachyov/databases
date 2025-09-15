@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 current_dir = os.path.dirname(__file__)
-log_file = os.path.join(current_dir, "..", "file.log")
+log_file = os.path.join(current_dir, "..", "logs", "parser_errors.log")
 data_dir = os.path.join(current_dir, "..", "data")
 os.makedirs(data_dir, exist_ok=True)
 
@@ -19,8 +19,8 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_file, encoding="utf-8"),  # запись в файл
-        logging.StreamHandler(),  # вывод в консоль
+        logging.FileHandler(log_file, encoding="utf-8", mode='w'),
+        logging.StreamHandler(),
     ],
 )
 
@@ -48,7 +48,7 @@ def try_request(url, headers, max_retries=3, delay=2):
                 return None
 
 
-def load_file(year):
+def load_file(year=2023):
     page_number = 65
     while True:
         url = f"{base_url}?page=page-{page_number}"
@@ -91,7 +91,7 @@ def load_file(year):
                         if response_file and response_file.status_code == 200:
                             with open(file_path, "wb") as f:
                                 for chunk in response_file.iter_content(
-                                        chunk_size=8192
+                                    chunk_size=8192
                                 ):
                                     if chunk:
                                         f.write(chunk)
@@ -116,4 +116,6 @@ def load_file(year):
         page_number += 1
 
 
-load_file(2023)
+if __name__ == "__main":
+    load_file()
+    print("good")
