@@ -1,6 +1,5 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
-
 
 DATABASE_URL = "postgresql+asyncpg://postgres:07052001@localhost:5432/async_excel_data"
 

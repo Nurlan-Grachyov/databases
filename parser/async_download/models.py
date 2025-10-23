@@ -1,9 +1,7 @@
 import asyncio
-
-from sqlalchemy import Column, Integer, String, Numeric, DateTime
-
 from parser.async_download.database import engine
 
+from sqlalchemy import Column, DateTime, Integer, Numeric, String
 from sqlalchemy.orm import DeclarativeBase
 
 
@@ -44,15 +42,15 @@ class Data(Base):
         if not isinstance(other, Data):
             return False
         return (
-                self.exchange_product_id == other.exchange_product_id
-                and self.exchange_product_name == other.exchange_product_name
-                and self.oil_id == other.oil_id
-                and self.delivery_basis_id == other.delivery_basis_id
-                and self.delivery_basis_name == other.delivery_basis_name
-                and self.delivery_type_id == other.delivery_type_id
-                and self.volume == other.volume
-                and self.total == other.total
-                and self.count == other.count
+            self.exchange_product_id == other.exchange_product_id
+            and self.exchange_product_name == other.exchange_product_name
+            and self.oil_id == other.oil_id
+            and self.delivery_basis_id == other.delivery_basis_id
+            and self.delivery_basis_name == other.delivery_basis_name
+            and self.delivery_type_id == other.delivery_type_id
+            and self.volume == other.volume
+            and self.total == other.total
+            and self.count == other.count
         )
 
 

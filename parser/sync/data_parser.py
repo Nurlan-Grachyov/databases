@@ -11,15 +11,15 @@ from dotenv import load_dotenv
 load_dotenv()
 
 current_dir = os.path.dirname(__file__)
-log_file = os.path.join(current_dir, "..", "logs", "parser_errors.log")
-data_dir = os.path.join(current_dir, "..", "data", "sync_files")
+log_file = os.path.join(current_dir, "..", "..", "logs", "parser_errors.log")
+data_dir = os.path.join(current_dir, "..", "..", "data", "sync_files")
 os.makedirs(data_dir, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_file, encoding="utf-8", mode='w'),
+        logging.FileHandler(log_file, encoding="utf-8", mode="w"),
         logging.StreamHandler(),
     ],
 )
@@ -33,12 +33,15 @@ headers = {"Accept": st_accept, "User-Agent": st_useragent}
 
 base_url = os.getenv("BASE_URL")
 
+t0 = time.time()
+
 
 def try_request(url, headers, max_retries=3, delay=2):
     """Попытка выполнить GET-запрос с несколькими повторными попытками."""
     for attempt in range(1, max_retries + 1):
         try:
             response = requests.get(url, headers=headers)
+
             return response
         except requests.RequestException as e:
             print(f"Ошибка при запросе {url}: {e}. Попытка {attempt} из {max_retries}.")
@@ -49,6 +52,7 @@ def try_request(url, headers, max_retries=3, delay=2):
 
 
 def load_file(year=2023):
+    count = 0
     page_number = 1
     while True:
         url = f"{base_url}?page=page-{page_number}"
@@ -95,7 +99,11 @@ def load_file(year=2023):
                                 ):
                                     if chunk:
                                         f.write(chunk)
-                            print(f"Файл сохранен: {file_path}")
+                            print(f"Файл сохранен: {file_path}", count)
+                        # count += 1
+                        # if count == 10:
+                        #     print(time.time() - t0)
+                        #     exit()
                         else:
                             print(
                                 f"Ошибка скачивания файла: "
