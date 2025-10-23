@@ -2,9 +2,9 @@ import logging
 import math
 import os
 from datetime import datetime
-from parser.database import session
-from parser.models import Data
-from parser.read_files import read_file
+from parser.sync.database import session
+from parser.sync.models import Data
+from parser.sync.read_files import read_file
 
 current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 current_dir = os.path.dirname(__file__)

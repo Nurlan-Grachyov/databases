@@ -12,7 +12,7 @@ load_dotenv()
 
 current_dir = os.path.dirname(__file__)
 log_file = os.path.join(current_dir, "..", "logs", "parser_errors.log")
-data_dir = os.path.join(current_dir, "..", "data")
+data_dir = os.path.join(current_dir, "..", "data", "sync_files")
 os.makedirs(data_dir, exist_ok=True)
 
 logging.basicConfig(
@@ -49,7 +49,7 @@ def try_request(url, headers, max_retries=3, delay=2):
 
 
 def load_file(year=2023):
-    page_number = 65
+    page_number = 1
     while True:
         url = f"{base_url}?page=page-{page_number}"
         response = try_request(url, headers)
@@ -116,6 +116,6 @@ def load_file(year=2023):
         page_number += 1
 
 
-if __name__ == "__main":
+if __name__ == "__main__":
     load_file()
     print("good")

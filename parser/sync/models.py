@@ -1,4 +1,4 @@
-from parser.database import engine
+from parser.sync.database import engine
 
 from sqlalchemy import Column, DateTime, Integer, Numeric, String
 from sqlalchemy.orm import DeclarativeBase
