@@ -4,8 +4,8 @@ import os
 import pandas as pd
 
 current_dir = os.path.dirname(__file__)
-data_dir = os.path.join(current_dir, "..", "data")
-log_file = os.path.join(current_dir, "..", "logs", "read_files_errors.log")
+data_dir = os.path.join(current_dir, "..", "..", "data", "sync_files")
+log_file = os.path.join(current_dir, "..", "..", "logs", "read_files_errors.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -17,6 +17,7 @@ logging.basicConfig(
 
 
 def read_file():
+    operations = []
     for filename in os.listdir(data_dir):
         filepath = os.path.join(data_dir, filename)
         if os.path.isfile(filepath):
@@ -43,7 +44,7 @@ def read_file():
             if not filtered_df.empty:
                 for _, row in filtered_df.iterrows():
                     try:
-                        yield {
+                        operation = {
                             "exchange_product_id": row["Код\nИнструмента"],
                             "exchange_product_name": row["Наименование\nИнструмента"],
                             "delivery_basis_name": row["Базис\nпоставки"],
@@ -51,8 +52,16 @@ def read_file():
                             "total": row["Обьем\nДоговоров,\nруб."],
                             "count": row["Количество\nДоговоров,\nшт."],
                         }
+                        operations.append(operation)
+
                     except Exception as e:
                         logging.error(
                             f"Ошибка при обработке строки в файле {filename}: {e}"
                         )
                         continue
+            print(operations)
+            return operations
+
+
+if __name__ == "__main__":
+    print(read_file())

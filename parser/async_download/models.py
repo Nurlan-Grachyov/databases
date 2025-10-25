@@ -1,4 +1,3 @@
-import asyncio
 from parser.async_download.database import engine
 
 from sqlalchemy import Column, DateTime, Integer, Numeric, String
@@ -54,9 +53,6 @@ class Data(Base):
         )
 
 
-async def main():
+async def start_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-
-asyncio.run(main())

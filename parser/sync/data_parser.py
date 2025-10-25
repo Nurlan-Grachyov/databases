@@ -52,9 +52,11 @@ def try_request(url, headers, max_retries=3, delay=2):
 
 
 def load_file(year=2023):
-    count = 0
+    count_files = 0
     page_number = 1
     while True:
+        if count_files == 50:
+            break
         url = f"{base_url}?page=page-{page_number}"
         response = try_request(url, headers)
         if response is None or response.status_code != 200:
@@ -99,11 +101,8 @@ def load_file(year=2023):
                                 ):
                                     if chunk:
                                         f.write(chunk)
-                            print(f"Файл сохранен: {file_path}", count)
-                        # count += 1
-                        # if count == 10:
-                        #     print(time.time() - t0)
-                        #     exit()
+                            count_files += 1
+                            print(f"Файл сохранен: {file_path}", count_files)
                         else:
                             print(
                                 f"Ошибка скачивания файла: "
