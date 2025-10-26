@@ -60,7 +60,7 @@ def read_file():
                         )
                         continue
             print(operations)
-            return operations
+    return operations
 
 
 if __name__ == "__main__":

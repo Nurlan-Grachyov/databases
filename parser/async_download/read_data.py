@@ -10,7 +10,7 @@ data_dir = os.path.join(current_dir, "..", "..", "data", "async_files")
 log_file = os.path.join(current_dir, "..", "..", "logs", "read_files_errors.log")
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s - %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(log_file, encoding="utf-8", mode="w"),
         logging.StreamHandler(),
@@ -41,7 +41,6 @@ async def read_excel_file(filepath):
                     "total": row["Обьем\nДоговоров,\nруб."],
                     "count": row["Количество\nДоговоров,\nшт."],
                 }
-        # return result_list
 
     except Exception as e:
         logging.error(f"Ошибка при обработке строки в файле {filepath}: {e}")
@@ -57,3 +56,12 @@ async def read_files_in_dir(data_dir):
         if os.path.isfile(filepath):
             async for data in read_excel_file(filepath):
                 yield data
+
+
+if __name__ == '__main__':
+    async def main():
+        async for data in read_files_in_dir(data_dir):
+            print(data)
+
+
+    asyncio.run(main())

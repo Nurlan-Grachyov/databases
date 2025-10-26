@@ -20,7 +20,7 @@ os.makedirs(data_dir, exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s - %(message)s",
+    format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
         logging.FileHandler(log_file, encoding="utf-8", mode="w"),
         logging.StreamHandler(),
@@ -91,8 +91,8 @@ async def process_link(session, link, headers, year):
                     content = await response_file.read()
                     async with aiofiles.open(file_path, "wb") as f:
                         await f.write(content)
-                    print(f"Файл сохранен: {file_path}, {count_files}")
                     count_files += 1
+                    print(f"Файл сохранен: {file_path}, {count_files}")
                 else:
                     print(
                         f"Ошибка скачивания файла: "
@@ -132,7 +132,6 @@ async def load_file(year=2023):
         while not stop_event.is_set():
             links, response = await load_page(session, page_number, headers)
             if stop_event.is_set():
-                print("stop is set?")
                 if response.closed:
                     print("Соединение уже закрыто")
                 return None

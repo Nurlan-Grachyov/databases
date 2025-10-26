@@ -142,7 +142,6 @@ logging.basicConfig(
 def send_data():
     count_operation = 0
     for data_dict in read_file():
-        count_operation += 1
         try:
             volume = data_dict.get("volume", 0)
             total = data_dict.get("total", 0)
@@ -224,11 +223,17 @@ def send_data():
                     logging.info("Объекты идентичны, записи не будет")
 
                 else:
+                    count_operation += 1
                     session.add(data)
                     print(
                         f"данные добавлены в сессию в количестве {count_operation} экземпляров"
                     )
-
+            else:
+                count_operation += 1
+                session.add(data)
+                print(
+                    f"данные добавлены в сессию в количестве {count_operation} экземпляров"
+                )
         except Exception as e:
             print(f"Ошибка при обработке данных: {e}")
             logging.error(f"Ошибка: {e}")
