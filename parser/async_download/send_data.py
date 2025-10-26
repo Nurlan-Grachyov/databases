@@ -4,7 +4,6 @@ import math
 import os
 from datetime import datetime
 
-from parser.async_download.data_parser import main_load
 from parser.async_download.database import async_session
 from parser.async_download.models import Data, start_db
 from parser.async_download.read_data import data_dir, read_files_in_dir
