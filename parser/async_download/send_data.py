@@ -3,7 +3,7 @@ import logging
 import math
 import os
 from datetime import datetime
-
+from parser.async_download.data_parser import main_load
 from parser.async_download.database import async_session
 from parser.async_download.models import Data, start_db
 from parser.async_download.read_data import data_dir, read_files_in_dir
@@ -22,12 +22,7 @@ logging.basicConfig(
 )
 
 ignore_fields = [
-    "volume",
     "oil_id",
-    "count",
-    "date",
-    "created_on",
-    "updated_on",
     "id",
     "_sa_instance_state",
     "delivery_basis_id",
@@ -90,7 +85,6 @@ async def send_data():
             if stop_event.is_set():
                 print("Обнаружено событие остановки, выходим из цикла чтения файлов")
                 break
-
             data_dict_need = {
                 k: (
                     int(v)
@@ -102,12 +96,9 @@ async def send_data():
             }
             data = await get_data(data_dict_need)
             objects_to_save.append(data)
-            print(data)
-
         if stop_event.is_set():
             print("Цикл остановлен по событию")
             break
-
     async with async_session() as session:
         try:
             if objects_to_save:
@@ -125,7 +116,7 @@ async def send_data():
 
 
 async def main():
-    # await main_load()
+    await main_load()
     await start_db()
     t0 = time()
     await send_data()

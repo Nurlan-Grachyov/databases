@@ -155,7 +155,7 @@ def send_data():
             if isinstance(count, float) and math.isnan(count):
                 count = 0
 
-            if count_operation == 20000:
+            if count_operation == 10000:
                 break
 
             exchange_product_id = data_dict.get("exchange_product_id")
