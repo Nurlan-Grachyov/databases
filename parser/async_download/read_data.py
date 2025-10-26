@@ -58,10 +58,10 @@ async def read_files_in_dir(data_dir):
                 yield data
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     async def main():
         async for data in read_files_in_dir(data_dir):
             print(data)
-
 
     asyncio.run(main())
