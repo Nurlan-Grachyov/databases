@@ -80,11 +80,11 @@ async def send_data():
     while not stop_event.is_set():
         print("читаем excel файлы")
         async for data_dict in read_files_in_dir(data_dir):
-            if len(objects_to_save) == 10000:
-                stop_event.set()
-            if stop_event.is_set():
-                print("Обнаружено событие остановки, выходим из цикла чтения файлов")
-                break
+            # if len(objects_to_save) == 10000:
+            #     stop_event.set()
+            # if stop_event.is_set():
+            #     print("Обнаружено событие остановки, выходим из цикла чтения файлов")
+            #     break
             data_dict_need = {
                 k: (
                     int(v)
@@ -96,9 +96,9 @@ async def send_data():
             }
             data = await get_data(data_dict_need)
             objects_to_save.append(data)
-        if stop_event.is_set():
-            print("Цикл остановлен по событию")
-            break
+        # if stop_event.is_set():
+        #     print("Цикл остановлен по событию")
+        #     break
     async with async_session() as session:
         try:
             if objects_to_save:

@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from time import time
 
 import aiofiles
 import aiohttp
@@ -10,7 +11,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
 load_dotenv()
-
+semaphore = asyncio.Semaphore(100)
 END_YEAR = 2023
 
 current_dir = os.path.dirname(__file__)
@@ -43,23 +44,24 @@ count_files = 0
 
 async def try_request(session, url, headers, max_retries=3, delay=2):
     """Попытка выполнить GET-запрос с несколькими повторными попытками."""
-    for attempt in range(1, max_retries + 1):
-        try:
-            response = await session.get(url, headers=headers)
-            return response
-        except aiohttp.ClientConnectionError as e:
-            print(
-                f"Ошибка соединения при запросе {url}: {e}. Попытка {attempt} из {max_retries}."
-            )
-            if attempt < max_retries:
-                await asyncio.sleep(delay)
-                print("Неудачно. Пробуем скачать файл еще раз.")
-                continue
-            else:
-                break
-        except aiohttp.ClientError as e:
-            print(f"Общая ошибка клиента при запросе {url}: {e}")
-            return None
+    async with semaphore:
+        for attempt in range(1, max_retries + 1):
+            try:
+                response = await session.get(url, headers=headers)
+                yield response
+            except aiohttp.ClientConnectionError as e:
+                print(
+                    f"Ошибка соединения при запросе {url}: {e}. Попытка {attempt} из {max_retries}."
+                )
+                if attempt < max_retries:
+                    await asyncio.sleep(delay)
+                    print("Неудачно. Пробуем скачать файл еще раз.")
+                    continue
+                else:
+                    break
+            except aiohttp.ClientError as e:
+                print(f"Общая ошибка клиента при запросе {url}: {e}")
+                yield None
 
 
 async def process_link(session, link, headers, year):
@@ -84,20 +86,20 @@ async def process_link(session, link, headers, year):
 
                 if os.path.exists(file_path):
                     print(f"Файл уже существует: {file_path}")
-                    return
+                    yield
 
-                response_file = await try_request(session, full_url, headers)
-                if response_file and response_file.status == 200:
-                    content = await response_file.read()
-                    async with aiofiles.open(file_path, "wb") as f:
-                        await f.write(content)
-                    count_files += 1
-                    print(f"Файл сохранен: {file_path}, {count_files}")
-                else:
-                    print(
-                        f"Ошибка скачивания файла: "
-                        f"{response_file.status if response_file else 'нет ответа'}"
-                    )
+                async for response_file in try_request(session, full_url, headers):
+                    if response_file and response_file.status == 200:
+                        content = await response_file.read()
+                        async with aiofiles.open(file_path, "wb") as f:
+                            await f.write(content)
+                        count_files += 1
+                        print(f"Файл сохранен: {file_path}, {count_files}")
+                    else:
+                        print(
+                            f"Ошибка скачивания файла: "
+                            f"{response_file.status if response_file else 'нет ответа'}"
+                        )
             else:
                 print(f"Файл ранее {year} года, скачивание завершается")
                 logging.warning(f"Файл ранее {year} года, скачивание завершается")
@@ -112,15 +114,15 @@ async def load_page(session, page_number, headers):
     Загружает страницу и возвращает список ссылок.
     """
     url = f"{base_url}?page=page-{page_number}"
-    response = await try_request(session, url, headers)
-    if response is None or response.status != 200:
-        print(
-            f"Ошибка доступа к странице {page_number}: {response.status if response else 'нет ответа'}"
-        )
-    content = await response.text()
-    soup = BeautifulSoup(content, "html.parser")
-    links = soup.find_all("a", class_="accordeon-inner__item-title link xls")
-    return links, response
+    async for response in try_request(session, url, headers):
+        if response is None or response.status != 200:
+            print(
+                f"Ошибка доступа к странице {page_number}: {response.status if response else 'нет ответа'}"
+            )
+        content = await response.text()
+        soup = BeautifulSoup(content, "html.parser")
+        links = soup.find_all("a", class_="accordeon-inner__item-title link xls")
+        yield links, response
 
 
 async def load_file(year=2023):
@@ -130,26 +132,29 @@ async def load_file(year=2023):
     page_number = 0
     async with aiohttp.ClientSession() as session:
         while not stop_event.is_set():
-            links, response = await load_page(session, page_number, headers)
-            if stop_event.is_set():
-                if response.closed:
-                    print("Соединение уже закрыто")
-                return None
-            if not links:
-                print(f"На странице {page_number} ссылок не найдено или ошибка.")
-                response.release()
-                break
+            async for links, response in load_page(session, page_number, headers):
+                if stop_event.is_set():
+                    if response.closed:
+                        print("Соединение уже закрыто")
+                    yield None
+                if not links:
+                    print(f"На странице {page_number} ссылок не найдено или ошибка.")
+                    response.release()
+                    break
 
-            tasks = [process_link(session, link, headers, year) for link in links]
-            await asyncio.gather(*tasks, return_exceptions=False)
+                for link in links:
+                    async for _ in process_link(session, link, headers, year):
+                        pass
 
             page_number += 1
 
 
 async def main_load():
-    task = asyncio.create_task(load_file(END_YEAR))
-    await asyncio.gather(task)
+    async for _ in load_file(END_YEAR):
+        pass
 
 
 if __name__ == "__main__":
+    t0 = time()
     asyncio.run(main_load())
+    print(time() - t0)
