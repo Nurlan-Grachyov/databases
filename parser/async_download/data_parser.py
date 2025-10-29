@@ -3,6 +3,7 @@ import logging
 import os
 import re
 from datetime import datetime
+from time import time
 
 import aiofiles
 import aiohttp
@@ -41,7 +42,7 @@ stop_event = asyncio.Event()
 count_files = 0
 
 
-async def try_request(session, url, headers, max_retries=3, delay=2):
+async def try_request(session, url, headers, max_retries=3, delay=0):
     """Попытка выполнить GET-запрос с несколькими повторными попытками."""
     for attempt in range(1, max_retries + 1):
         try:
@@ -52,7 +53,8 @@ async def try_request(session, url, headers, max_retries=3, delay=2):
                 f"Ошибка соединения при запросе {url}: {e}. Попытка {attempt} из {max_retries}."
             )
             if attempt < max_retries:
-                await asyncio.sleep(delay)
+                if delay:
+                    await asyncio.sleep(delay)
                 print("Неудачно. Пробуем скачать файл еще раз.")
                 continue
             else:
@@ -74,8 +76,8 @@ async def process_link(session, link, headers, year):
         time_str = match.group(2)
         try:
             date_obj = datetime.strptime(date_str + time_str, "%Y%m%d%H%M%S")
-            if count_files == 50:
-                stop_event.set()
+            # if count_files == 50:
+            #     stop_event.set()
             if date_obj.year >= year:
                 full_url = "https://spimex.com" + href
                 readable_date = date_obj.strftime("%Y-%m-%d_%H-%M-%S")
@@ -152,4 +154,6 @@ async def main_load():
 
 
 if __name__ == "__main__":
+    t0 = time()
     asyncio.run(main_load())
+    print(time() - t0)
