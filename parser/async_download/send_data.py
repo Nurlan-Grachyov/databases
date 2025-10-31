@@ -92,14 +92,8 @@ async def get_data(data_dict):
 async def send_data():
     async with async_session() as session:
         async with semaphore:
-            # while not stop_event.is_set():
             print("читаем excel файлы")
             async for data_dict in read_files_in_dir(data_dir):
-                # if len(objects_to_save) == 10000:
-                #     stop_event.set()
-                # if stop_event.is_set():
-                #     print("Обнаружено событие остановки, выходим из цикла чтения файлов")
-                #     break
                 data_dict_need = {
                     k: (
                         int(v)
@@ -111,9 +105,6 @@ async def send_data():
                 }
                 async for data in get_data(data_dict_need):
                     objects_to_save.append(data)
-                # if stop_event.is_set():
-                #     print("Цикл остановлен по событию")
-                #     break
                 try:
                     if objects_to_save:
                         session.add_all(objects_to_save)
@@ -124,10 +115,10 @@ async def send_data():
                     print(f"Ошибка при добавлении данных в сессию: {e}")
                     logging.error(e)
         try:
-            await session.commit()
             print(
                 f"данные сохранены в базу в количестве {len(session.new)} экземпляров"
             )
+            await session.commit()
         except Exception as e:
             print(f"Ошибка при коммите данных: {e}")
             logging.error(e)
