@@ -132,6 +132,7 @@ async def main():
 
     await start_db()
     logger_report.info(f"after start_db {time() - t0}")
+
     await send_data()
     logger_report.info(f"after send_data {time() - t0}")
 
