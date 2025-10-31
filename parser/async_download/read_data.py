@@ -1,5 +1,4 @@
 import asyncio
-import functools
 import logging
 import os
 
@@ -19,11 +18,8 @@ logging.basicConfig(
 
 
 async def read_excel_file(filepath):
-    loop = asyncio.get_event_loop()
     try:
-        df = await loop.run_in_executor(
-            None, functools.partial(pd.read_excel, filepath, skiprows=6)
-        )
+        df = await asyncio.to_thread(pd.read_excel, filepath, skiprows=6)
 
         df["Количество\nДоговоров,\nшт."] = pd.to_numeric(
             df["Количество\nДоговоров,\nшт."], errors="coerce"

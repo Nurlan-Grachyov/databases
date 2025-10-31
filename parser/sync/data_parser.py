@@ -25,10 +25,7 @@ logging.basicConfig(
 )
 
 st_accept = "text/html"
-st_useragent = (
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 12_3_1) AppleWebKit/605.1.15 (KHTML, like Gecko) "
-    "Version/15.4 Safari/605.1.15"
-)
+st_useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 12.3; rv:102.0) Gecko/20100101 Firefox/102.0"
 headers = {"Accept": st_accept, "User-Agent": st_useragent}
 
 base_url = os.getenv("BASE_URL")

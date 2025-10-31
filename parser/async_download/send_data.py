@@ -11,15 +11,28 @@ from time import time
 
 current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 current_dir = os.path.dirname(__file__)
-log_file = os.path.join(current_dir, "..", "..", "logs", "send_errors.log")
+log_file_error = os.path.join(current_dir, "..", "..", "logs", "send_errors.log")
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(log_file, encoding="utf-8", mode="w"),
+        logging.FileHandler(log_file_error, encoding="utf-8", mode="w"),
         logging.StreamHandler(),
     ],
 )
+
+log_file_report = os.path.join(current_dir, "..", "..", "logs", "report.log")
+logger_report = logging.getLogger("anotherLogger")
+logger_report.setLevel(logging.INFO)
+
+file_handler = logging.FileHandler(log_file_report, encoding="utf-8", mode="w")
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+file_handler.setFormatter(formatter)
+
+stream_handler = logging.StreamHandler()
+
+logger_report.addHandler(file_handler)
+logger_report.addHandler(stream_handler)
 
 ignore_fields = [
     "oil_id",
@@ -29,7 +42,7 @@ ignore_fields = [
     "delivery_type_id",
 ]
 
-semaphore = asyncio.BoundedSemaphore(1000)
+semaphore = asyncio.BoundedSemaphore(100)
 
 stop_event = asyncio.Event()
 
@@ -73,54 +86,64 @@ async def get_data(data_dict):
         created_on=datetime.now(),
         updated_on=datetime.now(),
     )
-    return data
+    yield data
 
 
 async def send_data():
-    while not stop_event.is_set():
-        print("читаем excel файлы")
-        async for data_dict in read_files_in_dir(data_dir):
-            # if len(objects_to_save) == 10000:
-            #     stop_event.set()
-            # if stop_event.is_set():
-            #     print("Обнаружено событие остановки, выходим из цикла чтения файлов")
-            #     break
-            data_dict_need = {
-                k: (
-                    int(v)
-                    if k == "total" and isinstance(v, str) and v.isdigit()
-                    else (None if isinstance(v, float) and math.isnan(v) else v)
-                )
-                for k, v in data_dict.items()
-                if k not in ignore_fields
-            }
-            data = await get_data(data_dict_need)
-            objects_to_save.append(data)
-        # if stop_event.is_set():
-        #     print("Цикл остановлен по событию")
-        #     break
     async with async_session() as session:
+        async with semaphore:
+            # while not stop_event.is_set():
+            print("читаем excel файлы")
+            async for data_dict in read_files_in_dir(data_dir):
+                # if len(objects_to_save) == 10000:
+                #     stop_event.set()
+                # if stop_event.is_set():
+                #     print("Обнаружено событие остановки, выходим из цикла чтения файлов")
+                #     break
+                data_dict_need = {
+                    k: (
+                        int(v)
+                        if k == "total" and isinstance(v, str) and v.isdigit()
+                        else (None if isinstance(v, float) and math.isnan(v) else v)
+                    )
+                    for k, v in data_dict.items()
+                    if k not in ignore_fields
+                }
+                async for data in get_data(data_dict_need):
+                    objects_to_save.append(data)
+                # if stop_event.is_set():
+                #     print("Цикл остановлен по событию")
+                #     break
+                try:
+                    if objects_to_save:
+                        session.add_all(objects_to_save)
+                        objects_to_save.clear()
+                    else:
+                        print("нет новых данных")
+                except Exception as e:
+                    print(f"Ошибка при добавлении данных в сессию: {e}")
+                    logging.error(e)
         try:
-            if objects_to_save:
-                session.add_all(objects_to_save)
-                await session.commit()
-                print(
-                    f"данные сохранены в базу в количестве {len(objects_to_save)} экземпляров"
-                )
-            else:
-                print("нет новых данных")
+            await session.commit()
+            print(
+                f"данные сохранены в базу в количестве {len(session.new)} экземпляров"
+            )
         except Exception as e:
-            print(f"Ошибка при коммите сессии: {e}")
+            print(f"Ошибка при коммите данных: {e}")
             logging.error(e)
             await session.rollback()
 
 
 async def main():
-    await main_load()
-    await start_db()
     t0 = time()
+    await main_load()
+    logger_report.info(f"after main_load {time() - t0}")
+
+    await start_db()
+    logger_report.info(f"after start_db {time() - t0}"
+                 )
     await send_data()
-    print(time() - t0)
+    logger_report.info(f"after send_data {time() - t0}")
 
 
 if __name__ == "__main__":
