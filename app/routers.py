@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from utils import is_after_1411, parse_flexible_date, to_dict
+from app.utils import is_after_1411, parse_flexible_date, to_dict
 
 router = APIRouter()
 
