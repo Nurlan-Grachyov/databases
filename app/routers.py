@@ -1,14 +1,18 @@
 import json
-from datetime import date, datetime
+from datetime import date
 from parser.async_download.db_depends import get_async_db
 from parser.async_download.models import Data
 
 import redis
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from utils import is_after_1411, parse_flexible_date, to_dict
+
 router = APIRouter()
+
+client = redis.Redis(host="localhost", port=6379, db=0)
 
 
 @router.get("/last_dates")
@@ -28,35 +32,20 @@ async def get_last_trading_dates(
     query = select(Data.date).distinct().order_by(Data.date.desc()).limit(limit)
     result = await db.scalars(query)
     list_dates = result.all()
+
+    if is_after_1411():
+        await client.delete("last_trading_dates")
+    data_dicts = [to_dict(item) for item in list_dates]
+    data_json = json.dumps(data_dicts)
+    await client.set("last_trading_dates", data_json)
+
     return list_dates
-
-
-async def parse_flexible_date(dates_str: str):
-    """
-    Парсит строку дат в формат даты.
-    Предполагается, что строка содержит одну дату в формате "%Y.%m.%d".
-
-    Аргументы:
-    - dates_str: строка с датой.
-
-    Возвращает:
-    - объект date, если формат корректен.
-
-    Исключает:
-    - HTTPException с кодом 400 при неправильном формате.
-    """
-    for date_str in dates_str:
-        try:
-            return datetime.strptime(date_str, "%Y.%m.%d").date()
-        except ValueError:
-            raise HTTPException(
-                status_code=400, detail=f"Некорректный формат даты: {date_str}"
-            )
 
 
 @router.get("/get_dynamics")
 async def get_dynamics(
-    dates: tuple[date, date] = Depends(parse_flexible_date),
+    start_date: date = Depends(parse_flexible_date),
+    end_date: date = Depends(parse_flexible_date),
     oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
     delivery_type_id: int | None = Query(None, description="ID типа поставки"),
     delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
@@ -66,16 +55,17 @@ async def get_dynamics(
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
 
     Параметры:
-    - dates: кортеж из двух дат (начальная и конечная).
-    - oil_id: ID вида нефти для фильтрации (опционально).
-    - delivery_type_id: ID типа поставки (опционально).
-    - delivery_basis_id: ID основы доставки (опционально).
-    - db: Асинхронная сессия базы данных, внедряемая через Depends.
+    - start_date (date): Начальная дата диапазона (в формате YYYY-MM-DD).
+    - end_date (date): Конечная дата диапазона (в формате YYYY-MM-DD).
+    - oil_id (int | None): ID вида нефти для фильтрации.
+    - delivery_type_id (int | None): ID типа поставки.
+    - delivery_basis_id (int | None): ID основы доставки.
+    - db (AsyncSession): Сессия БД.
 
-    Возвращает:
-    - список объектов Data, соответствующих фильтрам.
+    Результат:
+    возвращает торги, удовлетворяющие условиям
     """
-    start_date, end_date = dates
+
     list_filters = [start_date <= Data.date <= end_date]
 
     if oil_id:
@@ -85,37 +75,18 @@ async def get_dynamics(
     if delivery_basis_id:
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
-    db_data = select(Data).where(*list_filters)
-    data = await db.scalars(db_data)
-    return data.all()
+    query = select(Data).where(*list_filters)
+    results = await db.scalars(query)
+    datas = results.all()
 
+    # Работа с Redis
+    if is_after_1411():
+        await client.delete("dynamics")
+    data_dicts = [to_dict(item) for item in datas]
+    data_json = json.dumps(data_dicts)
+    await client.set("dynamics", data_json)
 
-def is_after_1411():
-    """
-    Проверяет, после ли 14:11 текущего дня.
-
-    Возвращает:
-    - True, если время позже 14:11.
-    - False в противном случае.
-    """
-    now = datetime.now()
-    return (now.hour > 14) or (now.hour == 14 and now.minute >= 11)
-
-
-def to_dict(instance):
-    """
-    Преобразует объект SQLAlchemy модели в словарь.
-
-    Аргументы:
-    - instance: объект модели Data.
-
-    Возвращает:
-    - словарь с ключами-именами колонок и соответствующими значениями.
-    """
-    return {
-        column.name: getattr(instance, column.name)
-        for column in instance.__table__.columns
-    }
+    return datas
 
 
 @router.get("/get_trading_results")
@@ -155,11 +126,10 @@ async def get_trading_results(
     data_list = results.all()
 
     # Работа с Redis
-    client = redis.Redis(host="localhost", port=6379, db=0)
     if is_after_1411():
-        await client.flushdb()
+        await client.delete("trading_results")
     data_dicts = [to_dict(item) for item in data_list]
     data_json = json.dumps(data_dicts)
-    await client.set("data", data_json)
+    await client.set("trading_results", data_json)
 
     return data_list
