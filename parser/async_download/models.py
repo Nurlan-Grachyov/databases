@@ -1,11 +1,6 @@
-from parser.async_download.database import engine
+from parser.async_download.database import Base, engine
 
-from sqlalchemy import Column, DateTime, Integer, Numeric, String
-from sqlalchemy.orm import DeclarativeBase
-
-
-class Base(DeclarativeBase):
-    pass
+from sqlalchemy import Column, Date, DateTime, Index, Integer, Numeric, String
 
 
 class Data(Base):
@@ -21,9 +16,11 @@ class Data(Base):
     volume = Column(Numeric(30, 8))
     total = Column(Numeric(30, 8))
     count = Column(Numeric(30, 8))
-    date = Column(DateTime)
+    date = Column(Date)
     created_on = Column(DateTime)
     updated_on = Column(DateTime)
+
+    __table_args__ = (Index("idx_date", "date"),)
 
     def __repr__(self):
         return str(

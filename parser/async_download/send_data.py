@@ -53,6 +53,8 @@ async def get_data(data_dict):
     volume = data_dict.get("volume", 0)
     total = data_dict.get("total", 0)
     count = data_dict.get("count", 0)
+    date_str = data_dict.get("date")
+    date_obj = datetime.strptime(date_str, "%d.%m.%Y").date()
 
     # Проверяем и заменяем nan на 0
     if isinstance(volume, float) and math.isnan(volume):
@@ -71,7 +73,6 @@ async def get_data(data_dict):
         oil_id = None
         delivery_basis_id = None
         delivery_type_id = None
-
     data = Data(
         exchange_product_id=exchange_product_id,
         exchange_product_name=data_dict.get("exchange_product_name", None),
@@ -82,7 +83,7 @@ async def get_data(data_dict):
         volume=volume,
         total=total,
         count=count,
-        date=datetime.now(),
+        date=date_obj,
         created_on=datetime.now(),
         updated_on=datetime.now(),
     )
@@ -107,6 +108,7 @@ async def send_data():
                     objects_to_save.append(data)
                 try:
                     if objects_to_save:
+                        # print(objects_to_save)
                         session.add_all(objects_to_save)
                         objects_to_save.clear()
                     else:
@@ -115,14 +117,15 @@ async def send_data():
                     print(f"Ошибка при добавлении данных в сессию: {e}")
                     logging.error(e)
         try:
-            print(
-                f"данные сохранены в базу в количестве {len(session.new)} экземпляров"
-            )
             await session.commit()
         except Exception as e:
             print(f"Ошибка при коммите данных: {e}")
             logging.error(e)
             await session.rollback()
+        else:
+            print(
+                f"данные сохранены в базу в количестве {len(session.new)} экземпляров"
+            )
 
 
 async def main():

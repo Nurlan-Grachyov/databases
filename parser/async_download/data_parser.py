@@ -115,10 +115,14 @@ async def load_page(session, page_number, headers):
     """
     url = f"{base_url}?page=page-{page_number}"
     async for response in try_request(session, url, headers):
-        if response is None or response.status != 200:
+        if response is None:
+            # ошибка, дальнейшие действия
+            continue
+        if response.status != 200:
             print(
-                f"Ошибка доступа к странице {page_number}: {response.status if response else 'нет ответа'}"
+                f"Ошибка доступа: статус {response.status}, ошибка {await response.text()}"
             )
+            continue
         content = await response.text()
         soup = BeautifulSoup(content, "html.parser")
         links = soup.find_all("a", class_="accordeon-inner__item-title link xls")
