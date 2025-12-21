@@ -17,7 +17,7 @@ client = redis.Redis(host="localhost", port=6379, db=0)
 
 @router.get("/last_dates")
 async def get_last_trading_dates(
-    limit: int = 10, db: AsyncSession = Depends(get_async_db)
+        limit: int = 10, db: AsyncSession = Depends(get_async_db)
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
@@ -29,27 +29,31 @@ async def get_last_trading_dates(
     Возвращает:
     - Список дат в порядке убывания.
     """
-    query = select(Data.date).distinct().order_by(Data.date.desc()).limit(limit)
-    result = await db.scalars(query)
-    list_dates = result.all()
 
     if is_after_1411():
+        query = select(Data.date).distinct().order_by(Data.date.desc()).limit(limit)
+        result = await db.scalars(query)
+        list_dates = result.all()
+
         await client.delete("last_trading_dates")
-    data_dicts = [to_dict(item) for item in list_dates]
-    data_json = json.dumps(data_dicts)
-    await client.set("last_trading_dates", data_json)
+        data_dicts = [to_dict(item) for item in list_dates]
+        data_json = json.dumps(data_dicts)
+        await client.set("last_trading_dates", data_json)
+
+    else:
+        list_dates = await client.get("last_trading_dates")
 
     return list_dates
 
 
 @router.get("/get_dynamics")
 async def get_dynamics(
-    start_date: date = Depends(parse_flexible_date),
-    end_date: date = Depends(parse_flexible_date),
-    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-    db: AsyncSession = Depends(get_async_db),
+        start_date: date = Depends(parse_flexible_date),
+        end_date: date = Depends(parse_flexible_date),
+        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+        db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
@@ -75,27 +79,29 @@ async def get_dynamics(
     if delivery_basis_id:
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
-    query = select(Data).where(*list_filters)
-    results = await db.scalars(query)
-    datas = results.all()
-
-    # Работа с Redis
     if is_after_1411():
+        query = select(Data).where(*list_filters)
+        results = await db.scalars(query)
+        datas = results.all()
+
         await client.delete("dynamics")
-    data_dicts = [to_dict(item) for item in datas]
-    data_json = json.dumps(data_dicts)
-    await client.set("dynamics", data_json)
+        data_dicts = [to_dict(item) for item in datas]
+        data_json = json.dumps(data_dicts)
+        await client.set("dynamics", data_json)
+
+    else:
+        datas = await client.get("dynamics")
 
     return datas
 
 
 @router.get("/get_trading_results")
 async def get_trading_results(
-    limit: int = Query(10, description="Количество последних операций"),
-    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-    db: AsyncSession = Depends(get_async_db),
+        limit: int = Query(10, description="Количество последних операций"),
+        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+        db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает последние операции трейдинга с возможностью фильтрации и ограничением.
@@ -120,16 +126,17 @@ async def get_trading_results(
     if delivery_basis_id:
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
-    # Выполняем запрос
-    query = select(Data).where(*list_filters).limit(limit)
-    results = await db.scalars(query)
-    data_list = results.all()
-
-    # Работа с Redis
     if is_after_1411():
+        query = select(Data).where(*list_filters).limit(limit)
+        results = await db.scalars(query)
+        data_list = results.all()
+
         await client.delete("trading_results")
-    data_dicts = [to_dict(item) for item in data_list]
-    data_json = json.dumps(data_dicts)
-    await client.set("trading_results", data_json)
+        data_dicts = [to_dict(item) for item in data_list]
+        data_json = json.dumps(data_dicts)
+        await client.set("trading_results", data_json)
+
+    else:
+        data_list = await client.get("trading_results")
 
     return data_list
