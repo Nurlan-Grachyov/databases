@@ -17,7 +17,7 @@ client = redis.Redis(host="localhost", port=6379, db=0)
 
 @router.get("/last_dates")
 async def get_last_trading_dates(
-        limit: int = 10, db: AsyncSession = Depends(get_async_db)
+    limit: int = 10, db: AsyncSession = Depends(get_async_db)
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
@@ -48,12 +48,12 @@ async def get_last_trading_dates(
 
 @router.get("/get_dynamics")
 async def get_dynamics(
-        start_date: date = Depends(parse_flexible_date),
-        end_date: date = Depends(parse_flexible_date),
-        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-        db: AsyncSession = Depends(get_async_db),
+    start_date: date = Depends(parse_flexible_date),
+    end_date: date = Depends(parse_flexible_date),
+    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
@@ -97,15 +97,15 @@ async def get_dynamics(
 
 @router.get("/get_trading_results")
 async def get_trading_results(
-        limit: int = Query(10, description="Количество последних операций"),
-        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-        db: AsyncSession = Depends(get_async_db),
+    limit: int = Query(10, description="Количество последних операций"),
+    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает последние операции трейдинга с возможностью фильтрации и ограничением.
-    Также сохраняет результаты в Redis, если время после 14:11.
+    Также пересохраняет результаты в Redis, если время после 14:11.
 
     Параметры:
     - limit: Максимальное число операций (по умолчанию 10).
