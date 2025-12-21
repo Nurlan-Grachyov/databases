@@ -17,13 +17,13 @@ client = redis.Redis(host="localhost", port=6379, db=0)
 
 @router.get("/last_dates")
 async def get_last_trading_dates(
-    limit: int = 10, db: AsyncSession = Depends(get_async_db)
+    limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
 
     Параметры:
-    - limit: Количество последних дат, которые нужно получить (по умолчанию 10).
+    - limit_days: Количество последних дат, которые нужно получить (по умолчанию 10).
     - db: Асинхронная сессия базы данных, внедряемая через Depends.
 
     Возвращает:
@@ -31,7 +31,7 @@ async def get_last_trading_dates(
     """
 
     if is_after_1411():
-        query = select(Data.date).distinct().order_by(Data.date.desc()).limit(limit)
+        query = select(Data.date).distinct().order_by(Data.date.desc()).limit(limit_days)
         result = await db.scalars(query)
         list_dates = result.all()
 
@@ -97,7 +97,7 @@ async def get_dynamics(
 
 @router.get("/get_trading_results")
 async def get_trading_results(
-    limit: int = Query(10, description="Количество последних операций"),
+    limit_trades: int = Query(10, description="Количество последних операций"),
     oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
     delivery_type_id: int | None = Query(None, description="ID типа поставки"),
     delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
@@ -108,7 +108,7 @@ async def get_trading_results(
     Также пересохраняет результаты в Redis, если время после 14:11.
 
     Параметры:
-    - limit: Максимальное число операций (по умолчанию 10).
+    - limit_trades: Максимальное число операций (по умолчанию 10).
     - oil_id: ID вида нефти для фильтрации (опционально).
     - delivery_type_id: ID типа поставки (опционально).
     - delivery_basis_id: ID основы доставки (опционально).
@@ -127,7 +127,7 @@ async def get_trading_results(
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
     if is_after_1411():
-        query = select(Data).where(*list_filters).limit(limit)
+        query = select(Data).where(*list_filters).limit(limit_trades)
         results = await db.scalars(query)
         data_list = results.all()
 
