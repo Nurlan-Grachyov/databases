@@ -1,31 +1,6 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from fastapi import HTTPException
-
-
-def parse_flexible_date(date_str: str):
-    """
-    Парсит строку дат в формат даты.
-    Предполагается, что строка содержит одну дату в форматах "YYYY.MM.DD", "DD.MM.YYYY", "YYYY-MM-DD" или "DD-MM-YYYY".
-
-    Аргументы:
-    - date_str: строка с датой.
-
-    Возвращает:
-    - объект date, если формат корректен.
-
-    Исключает:
-    - HTTPException с кодом 400 при неправильном формате.
-    """
-    for fmt in ("%Y.%m.%d", "%d.%m.%Y", "%Y-%m-%d", "%d-%m-%Y"):
-        try:
-            return datetime.strptime(date_str, fmt).date()
-        except ValueError:
-            continue
-    # Если ни один формат не подошел — выбрасываем исключение
-    raise HTTPException(status_code=400, detail=f"Некорректный формат даты: {date_str}")
-
 
 def is_after_1411():
     """

@@ -8,8 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.schemas import Dates, Trades
-from app.utils import (decimal_default, is_after_1411, parse_flexible_date,
-                       to_dict)
+from app.utils import decimal_default, is_after_1411, to_dict
 
 router = APIRouter()
 
@@ -49,7 +48,7 @@ async def get_last_trading_dates(
     else:
         list_dates_bytes = client.get("last_trading_dates")
         list_dates_json = list_dates_bytes.decode("utf-8")
-        list_dates_str = json.loads(list_dates_json)  # список строк
+        list_dates_str = json.loads(list_dates_json)
 
     # Объединяем оба варианта: строки с ISO датами
     return [Dates(date=d) for d in list_dates_str]
@@ -57,8 +56,8 @@ async def get_last_trading_dates(
 
 @router.get("/get_dynamics", response_model=list[Trades])
 async def get_dynamics(
-    start_date: str = Query(description="Дата начала", default="2025-11-21"),
-    end_date: str = Query(description="Дата окончания", default="2025-12-01"),
+    start_date: Dates = Query(description="Дата начала", default="2025-01-01"),
+    end_date: Dates = Query(description="Дата окончания", default="2025-12-01"),
     oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
     delivery_type_id: int | None = Query(None, description="ID типа поставки"),
     delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
@@ -68,7 +67,8 @@ async def get_dynamics(
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
 
     Параметры:
-    - start_date (date): Начальная дата диапазона (в форматах "YYYY.MM.DD", "DD.MM.YYYY", "YYYY-MM-DD" или "DD-MM-YYYY").
+    - start_date (date): Начальная дата диапазона (в форматах "YYYY.MM.DD", "DD.MM.YYYY",
+    "YYYY-MM-DD" или "DD-MM-YYYY").
     - end_date (date): Конечная дата диапазона (в форматах "YYYY.MM.DD", "DD.MM.YYYY", "YYYY-MM-DD" или "DD-MM-YYYY").
     - oil_id (int | None): ID вида нефти для фильтрации.
     - delivery_type_id (int | None): ID типа поставки.
@@ -79,8 +79,8 @@ async def get_dynamics(
     возвращает торги, удовлетворяющие условиям
     """
 
-    start_date = parse_flexible_date(start_date)
-    end_date = parse_flexible_date(end_date)
+    # start_date = parse_flexible_date(start_date)
+    # end_date = parse_flexible_date(end_date)
 
     list_filters = [Data.date >= start_date, Data.date <= end_date]
 
@@ -91,7 +91,7 @@ async def get_dynamics(
     if delivery_basis_id:
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
-    if is_after_1411():
+        # if is_after_1411():
         query = select(Data).where(*list_filters)
         results = await db.scalars(query)
         datas_str = results.all()
@@ -100,11 +100,12 @@ async def get_dynamics(
         data_dicts = [to_dict(item) for item in datas_str]
         data_json = json.dumps(data_dicts, default=decimal_default)
         client.set("dynamics", data_json)
-    #
+
     else:
         datas_bytes = client.get("dynamics")
         datas_json = datas_bytes.decode("utf-8")
         datas_str = json.loads(datas_json)
+        datas_str = to_dict(datas_str)
 
     return [
         Trades(
@@ -171,6 +172,7 @@ async def get_trading_results(
         data_list_bytes = client.get("trading_results")
         data_list_json = data_list_bytes.decode("utf-8")
         data_list = json.loads(data_list_json)
+        data_list = to_dict(data_list)
 
     return [
         Trades(
