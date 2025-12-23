@@ -28,7 +28,7 @@ st_accept = "text/html"
 st_useragent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 12.3; rv:102.0) Gecko/20100101 Firefox/102.0"
 headers = {"Accept": st_accept, "User-Agent": st_useragent}
 
-base_url = os.getenv("BASE_URL")
+base_url = os.getenv("OIL_TRADES_RESULTS_API_URL")
 
 t0 = time.time()
 

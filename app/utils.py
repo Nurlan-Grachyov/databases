@@ -1,12 +1,13 @@
-from datetime import datetime
+from datetime import date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException
 
 
-async def parse_flexible_date(date_str: str):
+def parse_flexible_date(date_str: str):
     """
     Парсит строку дат в формат даты.
-    Предполагается, что строка содержит одну дату в формате "%Y.%m.%d".
+    Предполагается, что строка содержит одну дату в форматах "YYYY.MM.DD", "DD.MM.YYYY", "YYYY-MM-DD" или "DD-MM-YYYY".
 
     Аргументы:
     - date_str: строка с датой.
@@ -17,12 +18,13 @@ async def parse_flexible_date(date_str: str):
     Исключает:
     - HTTPException с кодом 400 при неправильном формате.
     """
-    try:
-        return datetime.strptime(date_str, "%Y.%m.%d").date()
-    except ValueError:
-        raise HTTPException(
-            status_code=400, detail=f"Некорректный формат даты: {date_str}"
-        )
+    for fmt in ("%Y.%m.%d", "%d.%m.%Y", "%Y-%m-%d", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+    # Если ни один формат не подошел — выбрасываем исключение
+    raise HTTPException(status_code=400, detail=f"Некорректный формат даты: {date_str}")
 
 
 def is_after_1411():
@@ -38,16 +40,17 @@ def is_after_1411():
 
 
 def to_dict(instance):
-    """
-    Преобразует объект SQLAlchemy модели в словарь.
+    if hasattr(instance, "__table__"):
+        return {
+            column.name: getattr(instance, column.name)
+            for column in instance.__table__.columns
+        }
+    elif isinstance(instance, (date, datetime)):
+        return instance.isoformat()
+    else:
+        return instance
 
-    Аргументы:
-    - instance: объект модели Data.
 
-    Возвращает:
-    - словарь с ключами-именами колонок и соответствующими значениями.
-    """
-    return {
-        column.name: getattr(instance, column.name)
-        for column in instance.__table__.columns
-    }
+def decimal_default(obj):
+    if isinstance(obj, Decimal):
+        return str(obj)
