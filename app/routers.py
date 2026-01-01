@@ -1,4 +1,6 @@
 import json
+from datetime import date
+
 from parser.async_download.db_depends import get_async_db
 from parser.async_download.models import Data
 
@@ -17,7 +19,7 @@ client = redis.Redis(host="localhost", port=6379, db=0)
 
 @router.get("/last_dates", response_model=list[Dates])
 async def get_last_trading_dates(
-    limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
+        limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
@@ -56,20 +58,19 @@ async def get_last_trading_dates(
 
 @router.get("/get_dynamics", response_model=list[Trades])
 async def get_dynamics(
-    start_date: Dates = Query(description="Дата начала", default="2025-01-01"),
-    end_date: Dates = Query(description="Дата окончания", default="2025-12-01"),
-    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-    db: AsyncSession = Depends(get_async_db),
+        start_date: date = Query(default=date(2025, 1, 1), description="Дата начала"),
+        end_date: date = Query(default=date(2025, 12, 1), description="Дата окончания"),
+        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+        db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
 
     Параметры:
-    - start_date (date): Начальная дата диапазона (в форматах "YYYY.MM.DD", "DD.MM.YYYY",
-    "YYYY-MM-DD" или "DD-MM-YYYY").
-    - end_date (date): Конечная дата диапазона (в форматах "YYYY.MM.DD", "DD.MM.YYYY", "YYYY-MM-DD" или "DD-MM-YYYY").
+    - start_date (date): Начальная дата диапазона (в формате "YYYY-MM-DD").
+    - end_date (date): Конечная дата диапазона (в формате "YYYY-MM-DD").
     - oil_id (int | None): ID вида нефти для фильтрации.
     - delivery_type_id (int | None): ID типа поставки.
     - delivery_basis_id (int | None): ID основы доставки.
@@ -105,7 +106,7 @@ async def get_dynamics(
         datas_bytes = client.get("dynamics")
         datas_json = datas_bytes.decode("utf-8")
         datas_str = json.loads(datas_json)
-        datas_str = to_dict(datas_str)
+        data_dicts = [to_dict(item) for item in datas_str]
 
     return [
         Trades(
@@ -117,23 +118,23 @@ async def get_dynamics(
             total=round(float(item.get("total")), 2),
             count=round(float(item.get("count")), 2),
         )
-        for item in datas_str
+        for item in data_dicts
         if item.get("exchange_product_id")
-        and item.get("exchange_product_name")
-        and item.get("delivery_basis_name")
-        and item.get("volume")
-        and item.get("total")
-        and item.get("count")
+           and item.get("exchange_product_name")
+           and item.get("delivery_basis_name")
+           and item.get("volume")
+           and item.get("total")
+           and item.get("count")
     ]
 
 
 @router.get("/get_trading_results", response_model=list[Trades])
 async def get_trading_results(
-    limit_trades: int = Query(10, description="Количество последних операций"),
-    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-    db: AsyncSession = Depends(get_async_db),
+        limit_trades: int = Query(10, description="Количество последних операций"),
+        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+        db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает последние операции трейдинга с возможностью фильтрации и ограничением.
@@ -162,7 +163,6 @@ async def get_trading_results(
         query = select(Data).where(*list_filters).limit(limit_trades)
         results = await db.scalars(query)
         data_list = results.all()
-
         client.delete("trading_results")
         data_dicts = [to_dict(item) for item in data_list]
         data_json = json.dumps(data_dicts, default=decimal_default)
@@ -172,7 +172,7 @@ async def get_trading_results(
         data_list_bytes = client.get("trading_results")
         data_list_json = data_list_bytes.decode("utf-8")
         data_list = json.loads(data_list_json)
-        data_list = to_dict(data_list)
+        data_dicts = [to_dict(item) for item in data_list]
 
     return [
         Trades(
@@ -184,11 +184,11 @@ async def get_trading_results(
             total=round(float(item.get("total")), 2),
             count=round(float(item.get("count")), 2),
         )
-        for item in data_list
+        for item in data_dicts
         if item.get("exchange_product_id")
-        and item.get("exchange_product_name")
-        and item.get("delivery_basis_name")
-        and item.get("volume")
-        and item.get("total")
-        and item.get("count")
+           and item.get("exchange_product_name")
+           and item.get("delivery_basis_name")
+           and item.get("volume")
+           and item.get("total")
+           and item.get("count")
     ]
