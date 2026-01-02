@@ -1,6 +1,5 @@
 import json
 from datetime import date
-
 from parser.async_download.db_depends import get_async_db
 from parser.async_download.models import Data
 
@@ -19,7 +18,7 @@ client = redis.Redis(host="localhost", port=6379, db=0)
 
 @router.get("/last_dates", response_model=list[Dates])
 async def get_last_trading_dates(
-        limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
+    limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
@@ -58,12 +57,12 @@ async def get_last_trading_dates(
 
 @router.get("/get_dynamics", response_model=list[Trades])
 async def get_dynamics(
-        start_date: date = Query(default=date(2025, 1, 1), description="Дата начала"),
-        end_date: date = Query(default=date(2025, 12, 1), description="Дата окончания"),
-        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-        db: AsyncSession = Depends(get_async_db),
+    start_date: date = Query(default=date(2025, 1, 1), description="Дата начала"),
+    end_date: date = Query(default=date(2025, 12, 1), description="Дата окончания"),
+    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
@@ -80,9 +79,6 @@ async def get_dynamics(
     возвращает торги, удовлетворяющие условиям
     """
 
-    # start_date = parse_flexible_date(start_date)
-    # end_date = parse_flexible_date(end_date)
-
     list_filters = [Data.date >= start_date, Data.date <= end_date]
 
     if oil_id:
@@ -92,7 +88,7 @@ async def get_dynamics(
     if delivery_basis_id:
         list_filters.append(Data.delivery_basis_id == delivery_basis_id)
 
-        # if is_after_1411():
+    if is_after_1411():
         query = select(Data).where(*list_filters)
         results = await db.scalars(query)
         datas_str = results.all()
@@ -120,21 +116,21 @@ async def get_dynamics(
         )
         for item in data_dicts
         if item.get("exchange_product_id")
-           and item.get("exchange_product_name")
-           and item.get("delivery_basis_name")
-           and item.get("volume")
-           and item.get("total")
-           and item.get("count")
+        and item.get("exchange_product_name")
+        and item.get("delivery_basis_name")
+        and item.get("volume")
+        and item.get("total")
+        and item.get("count")
     ]
 
 
 @router.get("/get_trading_results", response_model=list[Trades])
 async def get_trading_results(
-        limit_trades: int = Query(10, description="Количество последних операций"),
-        oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
-        delivery_type_id: int | None = Query(None, description="ID типа поставки"),
-        delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
-        db: AsyncSession = Depends(get_async_db),
+    limit_trades: int = Query(10, description="Количество последних операций"),
+    oil_id: int | None = Query(None, description="ID вида нефти для фильтрации"),
+    delivery_type_id: int | None = Query(None, description="ID типа поставки"),
+    delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
+    db: AsyncSession = Depends(get_async_db),
 ):
     """
     Получает последние операции трейдинга с возможностью фильтрации и ограничением.
@@ -186,9 +182,9 @@ async def get_trading_results(
         )
         for item in data_dicts
         if item.get("exchange_product_id")
-           and item.get("exchange_product_name")
-           and item.get("delivery_basis_name")
-           and item.get("volume")
-           and item.get("total")
-           and item.get("count")
+        and item.get("exchange_product_name")
+        and item.get("delivery_basis_name")
+        and item.get("volume")
+        and item.get("total")
+        and item.get("count")
     ]

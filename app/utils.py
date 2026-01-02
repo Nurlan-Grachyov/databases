@@ -11,7 +11,7 @@ def is_after_1411():
     - False в противном случае.
     """
     now = datetime.now()
-    return (now.hour > 14) or (now.hour == 14 and now.minute >= 11)
+    return now.hour >= 14 and now.minute > 11
 
 
 def to_dict(instance):

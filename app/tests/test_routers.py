@@ -1,18 +1,56 @@
-import pytest
+import json
+from unittest.mock import patch
 
-import app
-from app.routers import get_last_trading_dates
-from app.schemas import Dates
-from parser.async_download.db_depends import get_async_db
+import pytest
+from fastapi.testclient import TestClient
+
+from app.main import fast_api_app
+
+
+@pytest.fixture
+def return_data():
+    return [
+        {
+            "exchange_product_id": "DE15YAI065F",
+            "exchange_product_name": "ДТ ЕВРО класс 1 (ДТ-З-К5) минус 26, ст. Яничкино (ст. отправления)",
+            "delivery_basis_name": "ст. Яничкино",
+            "volume": 650,
+            "total": 45961630,
+            "count": 10,
+        }
+    ]
 
 
 @pytest.mark.asyncio
-async def test_get_last_trading_dates(mocker):
-    mocker.patch("app.routers.get_last_trading_dates", return_value=[Dates(date="2025-12-10")])
+@patch("app.routers.client")
+async def test_get_last_trading_dates(mock_client):
+    mock_client.get.return_value = json.dumps(["2025-12-10"]).encode("utf-8")
+    client = TestClient(fast_api_app)
+    response = client.get("/last_dates")
+    assert response.status_code == 200
+    mock_client.get.assert_called()
+    data = response.json()
+    assert data == [{"date": "2025-12-10"}]
 
-    async for db in get_async_db():
-        result = await app.routers.get_last_trading_dates(db=db)
-        assert result == [
-            Dates(date="2025-12-10"),
-        ]
 
+@pytest.mark.asyncio
+@patch("app.routers.client")
+async def test_get_dynamics(mock_client, return_data):
+    mock_client.get.return_value = json.dumps(return_data).encode("utf-8")
+    client = TestClient(fast_api_app)
+    response = client.get("/get_dynamics")
+    assert response.status_code == 200
+    mock_client.get.assert_called()
+    data = response.json()
+    assert data == return_data
+
+
+@pytest.mark.asyncio
+@patch("app.routers.client")
+async def test_get_trading_results(mock_client, return_data):
+    mock_client.get.return_value = json.dumps(return_data).encode("utf-8")
+    client = TestClient(fast_api_app)
+    response = client.get("/get_trading_results")
+    assert response.status_code == 200
+    mock_client.get.assert_called()
+    assert response.json() == return_data
