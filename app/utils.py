@@ -15,6 +15,15 @@ def is_after_1411():
 
 
 def to_dict(instance):
+    """
+    Преобразовать экземпляр модели SQLAlchemy в словарь.
+
+    Args:
+        instance: Экземпляр модели SQLAlchemy.
+
+    Returns:
+        Словарь, представляющий экземпляр.
+    """
     if hasattr(instance, "__table__"):
         return {
             column.name: getattr(instance, column.name)
@@ -27,5 +36,14 @@ def to_dict(instance):
 
 
 def decimal_default(obj):
+    """
+    Преобразовать Decimal в строку.
+
+    Args:
+        obj: Decimal-объект.
+
+    Returns:
+        Строковое представление Decimal-объекта.
+    """
     if isinstance(obj, Decimal):
         return str(obj)
