@@ -1,18 +1,7 @@
 import decimal
-from datetime import datetime
 from parser.async_download.models import Data
 
-import app.utils
-
-
-def test_is_after_1411():
-    now = datetime.now()
-    if now.hour >= 14 and now.minute > 11:
-        result = app.utils.is_after_1411()
-        assert result
-    else:
-        result = app.utils.is_after_1411()
-        assert not result
+from app.utils import decimal_default, to_dict
 
 
 def test_to_dict():
@@ -25,7 +14,7 @@ def test_to_dict():
         total=3459540,
         count=1,
     )
-    result = app.utils.to_dict(data)
+    result = to_dict(data)
     assert result == {
         "id": 1,
         "exchange_product_id": "A100ANK060F",
@@ -45,5 +34,5 @@ def test_to_dict():
 
 def test_decimal_default():
     dec_value = decimal.Decimal("123.456")
-    result = app.utils.decimal_default(dec_value)
+    result = decimal_default(dec_value)
     assert result == "123.456"
