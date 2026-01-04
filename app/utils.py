@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 
 
@@ -10,8 +10,9 @@ def is_after_1411():
     - True, если время позже 14:11.
     - False в противном случае.
     """
-    now = datetime.now()
-    return now.hour >= 14 and now.minute > 11
+    now = datetime.now().time()
+    target = time(14, 11)
+    return now > target
 
 
 def to_dict(instance):

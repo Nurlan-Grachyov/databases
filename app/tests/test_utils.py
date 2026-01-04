@@ -1,7 +1,17 @@
 import decimal
+from datetime import time
 from parser.async_download.models import Data
+from unittest.mock import patch
 
-from app.utils import decimal_default, to_dict
+from app.utils import decimal_default, is_after_1411, to_dict
+
+
+@patch("app.utils.datetime")
+def test_is_after_1411_true(mock_datetime):
+    mock_now = mock_datetime.now.return_value
+    mock_now.time.return_value = time(14, 12)
+
+    assert is_after_1411() is True
 
 
 def test_to_dict():
