@@ -3,8 +3,7 @@ from datetime import date
 from parser.async_download.db_depends import get_async_db
 from parser.async_download.models import Data
 
-import redis
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,12 +12,16 @@ from app.utils import decimal_default, is_after_1411, to_dict
 
 router = APIRouter()
 
-client = redis.Redis(host="localhost", port=6379, db=0)
+
+async def get_redis(request: Request):
+    return request.state.redis
 
 
 @router.get("/last_dates", response_model=list[Dates])
 async def get_last_trading_dates(
-    limit_days: int = 10, db: AsyncSession = Depends(get_async_db)
+    limit_days: int = 10,
+    db: AsyncSession = Depends(get_async_db),
+    cache=Depends(get_redis),
 ):
     """
     Получает последние уникальные даты торгов за указанное количество записей.
@@ -41,15 +44,14 @@ async def get_last_trading_dates(
         list_dates_str = [date.isoformat() for date in list_dates]
 
         # Сохраняем в кеш
-        client.delete("last_trading_dates")
+        await cache.delete("last_trading_dates")
         data_dicts = [to_dict(item) for item in list_dates_str]
         data_json = json.dumps(data_dicts)
-        client.set("last_trading_dates", data_json)
+        await cache.set("last_trading_dates", data_json)
 
     else:
-        list_dates_bytes = client.get("last_trading_dates")
-        list_dates_json = list_dates_bytes.decode("utf-8")
-        list_dates_str = json.loads(list_dates_json)
+        list_dates_json = await cache.get("last_trading_dates")
+        list_dates_str = json.loads(list_dates_json) if list_dates_json else []
 
     # Объединяем оба варианта: строки с ISO датами
     return [Dates(date=d) for d in list_dates_str]
@@ -63,6 +65,7 @@ async def get_dynamics(
     delivery_type_id: int | None = Query(None, description="ID типа поставки"),
     delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
     db: AsyncSession = Depends(get_async_db),
+    cache=Depends(get_redis),
 ):
     """
     Получает динамику данных за указанный диапазон дат с возможностью фильтрации.
@@ -93,16 +96,14 @@ async def get_dynamics(
         results = await db.scalars(query)
         datas_str = results.all()
 
-        client.delete("dynamics")
+        await cache.delete("dynamics")
         data_dicts = [to_dict(item) for item in datas_str]
         data_json = json.dumps(data_dicts, default=decimal_default)
-        client.set("dynamics", data_json)
+        await cache.set("dynamics", data_json)
 
     else:
-        datas_bytes = client.get("dynamics")
-        datas_json = datas_bytes.decode("utf-8")
-        datas_str = json.loads(datas_json)
-        data_dicts = [to_dict(item) for item in datas_str]
+        datas_json = await cache.get("dynamics")
+        data_dicts = json.loads(datas_json) if datas_json else []
 
     return [
         Trades(
@@ -131,6 +132,7 @@ async def get_trading_results(
     delivery_type_id: int | None = Query(None, description="ID типа поставки"),
     delivery_basis_id: int | None = Query(None, description="ID основы доставки"),
     db: AsyncSession = Depends(get_async_db),
+    cache=Depends(get_redis),
 ):
     """
     Получает последние операции трейдинга с возможностью фильтрации и ограничением.
@@ -159,16 +161,14 @@ async def get_trading_results(
         query = select(Data).where(*list_filters).limit(limit_trades)
         results = await db.scalars(query)
         data_list = results.all()
-        client.delete("trading_results")
+        await cache.delete("trading_results")
         data_dicts = [to_dict(item) for item in data_list]
         data_json = json.dumps(data_dicts, default=decimal_default)
-        client.set("trading_results", data_json)
+        await cache.set("trading_results", data_json)
 
     else:
-        data_list_bytes = client.get("trading_results")
-        data_list_json = data_list_bytes.decode("utf-8")
-        data_list = json.loads(data_list_json)
-        data_dicts = [to_dict(item) for item in data_list]
+        datas_json = await cache.get("trading_results")
+        data_dicts = json.loads(datas_json) if datas_json else []
 
     return [
         Trades(

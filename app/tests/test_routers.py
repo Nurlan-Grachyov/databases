@@ -4,9 +4,10 @@ from parser.async_download.db_depends import get_async_db
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 
 from app.main import fast_api_app
+from app.routers import get_redis
 
 
 @pytest.fixture
@@ -25,22 +26,23 @@ def return_data():
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=False)
-@patch("app.routers.client")
-async def test_get_last_trading_dates(mock_client, mock_is_after):
-    mock_client.get.return_value = json.dumps(["2025-12-10"]).encode("utf-8")
+async def test_get_last_trading_dates(mock_is_after):
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = json.dumps(["2025-12-10"])
 
-    client = TestClient(fast_api_app)
-    response = client.get("/last_dates")
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/last_dates")
 
     assert response.status_code == 200
     assert response.json() == [{"date": "2025-12-10"}]
-    mock_client.get.assert_called_with("last_trading_dates")
 
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=True)
-@patch("app.routers.client")
-async def test_get_last_trading_dates_with_is_after_1411(mock_client, mock_is_after):
+async def test_get_last_trading_dates_with_is_after_1411(mock_is_after):
     async def mock_db_scalars(*args):
         result = MagicMock()
         result.all.return_value = [date(2025, 12, 10)]
@@ -49,10 +51,16 @@ async def test_get_last_trading_dates_with_is_after_1411(mock_client, mock_is_af
     mock_db = AsyncMock()
     mock_db.scalars = mock_db_scalars
 
-    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    mock_cache = AsyncMock()
 
-    client = TestClient(fast_api_app)
-    response = client.get("/last_dates")
+    # 3. Переопределяем ОБЕ зависимости
+    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/last_dates", params={"limit_days": 10})
 
     assert response.status_code == 200
     assert response.json() == [{"date": "2025-12-10"}]
@@ -60,21 +68,23 @@ async def test_get_last_trading_dates_with_is_after_1411(mock_client, mock_is_af
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=False)
-@patch("app.routers.client")
-async def test_get_dynamics(mock_client, mock_is_after, return_data):
-    mock_client.get.return_value = json.dumps(return_data).encode("utf-8")
-    client = TestClient(fast_api_app)
-    response = client.get("/get_dynamics")
+async def test_get_dynamics(mock_is_after, return_data):
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = json.dumps(return_data)
+
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/get_dynamics")
     assert response.status_code == 200
-    mock_client.get.assert_called()
     data = response.json()
     assert data == return_data
 
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=True)
-@patch("app.routers.client")
-async def test_get_dynamics_with_is_after_1411(mock_client, mock_is_after, return_data):
+async def test_get_dynamics_with_is_after_1411(mock_is_after, return_data):
     async def mock_db_scalars(*args):
         result = MagicMock()
         result.all.return_value = return_data
@@ -83,10 +93,15 @@ async def test_get_dynamics_with_is_after_1411(mock_client, mock_is_after, retur
     mock_db = AsyncMock()
     mock_db.scalars = mock_db_scalars
 
-    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    mock_cache = AsyncMock()
 
-    client = TestClient(fast_api_app)
-    response = client.get("/get_dynamics")
+    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/get_dynamics")
 
     assert response.status_code == 200
     assert response.json() == return_data
@@ -94,22 +109,24 @@ async def test_get_dynamics_with_is_after_1411(mock_client, mock_is_after, retur
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=False)
-@patch("app.routers.client")
-async def test_get_trading_results(mock_client, mock_is_after, return_data):
-    mock_client.get.return_value = json.dumps(return_data).encode("utf-8")
-    client = TestClient(fast_api_app)
-    response = client.get("/get_trading_results")
+async def test_get_trading_results(mock_is_after, return_data):
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = json.dumps(return_data)
+
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/get_trading_results")
+
     assert response.status_code == 200
-    mock_client.get.assert_called()
     assert response.json() == return_data
 
 
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=True)
-@patch("app.routers.client")
-async def test_get_trading_results_with_is_after_1411(
-    mock_client, mock_is_after, return_data
-):
+async def test_get_trading_results_with_is_after_1411(mock_is_after, return_data):
     async def mock_db_scalars(*args):
         result = MagicMock()
         result.all.return_value = return_data
@@ -118,10 +135,15 @@ async def test_get_trading_results_with_is_after_1411(
     mock_db = AsyncMock()
     mock_db.scalars = mock_db_scalars
 
-    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    mock_cache = AsyncMock()
 
-    client = TestClient(fast_api_app)
-    response = client.get("/get_trading_results")
+    fast_api_app.dependency_overrides[get_async_db] = lambda: mock_db
+    fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
+
+    async with AsyncClient(
+        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+    ) as ac:
+        response = await ac.get("/get_trading_results")
 
     assert response.status_code == 200
     assert response.json() == return_data
