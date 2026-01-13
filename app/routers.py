@@ -96,6 +96,7 @@ async def get_dynamics(
         results = await db.scalars(query)
         datas_str = results.all()
 
+        # Сохраняем в кеш
         await cache.delete("dynamics")
         data_dicts = [to_dict(item) for item in datas_str]
         data_json = json.dumps(data_dicts, default=decimal_default)
@@ -161,6 +162,8 @@ async def get_trading_results(
         query = select(Data).where(*list_filters).limit(limit_trades)
         results = await db.scalars(query)
         data_list = results.all()
+
+        # Сохраняем в кеш
         await cache.delete("trading_results")
         data_dicts = [to_dict(item) for item in data_list]
         data_json = json.dumps(data_dicts, default=decimal_default)

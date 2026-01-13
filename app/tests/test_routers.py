@@ -24,6 +24,12 @@ def return_data():
     ]
 
 
+@pytest.fixture(autouse=True)
+def cleanup_overrides():
+    yield
+    fast_api_app.dependency_overrides.clear()
+
+
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=False)
 async def test_get_last_trading_dates(mock_is_after):
@@ -32,7 +38,7 @@ async def test_get_last_trading_dates(mock_is_after):
 
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/last_dates")
 
@@ -58,7 +64,7 @@ async def test_get_last_trading_dates_with_is_after_1411(mock_is_after):
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
 
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/last_dates", params={"limit_days": 10})
 
@@ -74,7 +80,7 @@ async def test_get_dynamics(mock_is_after, return_data):
 
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/get_dynamics")
     assert response.status_code == 200
@@ -99,7 +105,7 @@ async def test_get_dynamics_with_is_after_1411(mock_is_after, return_data):
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
 
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/get_dynamics")
 
@@ -116,7 +122,7 @@ async def test_get_trading_results(mock_is_after, return_data):
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_redis
 
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/get_trading_results")
 
@@ -141,7 +147,7 @@ async def test_get_trading_results_with_is_after_1411(mock_is_after, return_data
     fast_api_app.dependency_overrides[get_redis] = lambda: mock_cache
 
     async with AsyncClient(
-        transport=ASGITransport(app=fast_api_app), base_url="http://test"
+            transport=ASGITransport(app=fast_api_app), base_url="http://test"
     ) as ac:
         response = await ac.get("/get_trading_results")
 
