@@ -1,7 +1,9 @@
+import datetime
 import json
 from datetime import date
 from parser.async_download.db_depends import get_async_db
 from parser.async_download.models import Data
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
@@ -11,6 +13,21 @@ from app.schemas import Dates, Trades
 from app.utils import decimal_default, is_after_1411, to_dict
 
 router = APIRouter()
+
+
+def calculating_the_lifetime():
+    moscow_tz = ZoneInfo("Europe/Moscow")
+
+    now = datetime.datetime.now(moscow_tz)
+
+    target_time = now.replace(hour=14, minute=11, second=0, microsecond=0)
+
+    if now >= target_time:
+        target_time += datetime.timedelta(days=1)
+
+    delta = target_time - now
+    seconds_until_target = int(delta.total_seconds())
+    return seconds_until_target
 
 
 async def get_redis(request: Request):
@@ -47,13 +64,15 @@ async def get_last_trading_dates(
         await cache.delete("last_trading_dates")
         data_dicts = [to_dict(item) for item in list_dates_str]
         data_json = json.dumps(data_dicts)
-        await cache.set("last_trading_dates", data_json)
+
+        seconds_until_target = calculating_the_lifetime()
+
+        await cache.set("last_trading_dates", data_json, ex=seconds_until_target)
 
     else:
         list_dates_json = await cache.get("last_trading_dates")
         list_dates_str = json.loads(list_dates_json) if list_dates_json else []
 
-    # Объединяем оба варианта: строки с ISO датами
     return [Dates(date=d) for d in list_dates_str]
 
 
@@ -100,7 +119,10 @@ async def get_dynamics(
         await cache.delete("dynamics")
         data_dicts = [to_dict(item) for item in datas_str]
         data_json = json.dumps(data_dicts, default=decimal_default)
-        await cache.set("dynamics", data_json)
+
+        seconds_until_target = calculating_the_lifetime()
+
+        await cache.set("dynamics", data_json, ex=seconds_until_target)
 
     else:
         datas_json = await cache.get("dynamics")
@@ -167,7 +189,10 @@ async def get_trading_results(
         await cache.delete("trading_results")
         data_dicts = [to_dict(item) for item in data_list]
         data_json = json.dumps(data_dicts, default=decimal_default)
-        await cache.set("trading_results", data_json)
+
+        seconds_until_target = calculating_the_lifetime()
+
+        await cache.set("trading_results", data_json, ex=seconds_until_target)
 
     else:
         datas_json = await cache.get("trading_results")
