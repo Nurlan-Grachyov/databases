@@ -9,10 +9,11 @@ from app.routers import router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     redis_client = redis.Redis(host="localhost", port=6379, decode_responses=True)
-
-    yield {"redis": redis_client}
-
-    await redis_client.aclose()
+    try:
+        app.state.redis = redis_client
+        yield
+    finally:
+        await redis_client.aclose()
 
 
 fast_api_app = FastAPI(lifespan=lifespan)

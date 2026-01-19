@@ -31,7 +31,7 @@ def calculating_the_lifetime():
 
 
 async def get_redis(request: Request):
-    return request.state.redis
+    return request.app.state.redis
 
 
 @router.get("/last_dates", response_model=list[Dates])
