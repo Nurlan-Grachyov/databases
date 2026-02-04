@@ -30,7 +30,7 @@ def calculating_the_lifetime():
     return seconds_until_target
 
 
-async def get_redis(request: Request):
+def get_redis(request: Request):
     return request.app.state.redis
 
 

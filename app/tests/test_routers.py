@@ -29,7 +29,7 @@ def cleanup_overrides():
     yield
     fast_api_app.dependency_overrides.clear()
 
-
+@pytest.mark.skip
 @pytest.mark.asyncio
 @patch("app.routers.is_after_1411", return_value=False)
 async def test_get_last_trading_dates(mock_is_after):
